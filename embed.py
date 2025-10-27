@@ -28,3 +28,7 @@ class Embed:
 
 Embed.init_embedder()
 _ = Embed.get_vector("hello")
+
+if __name__ == "__main__":
+    print(Embed.get_vectors(["hello"]))
+    print(Embed.get_vector("hello"))
