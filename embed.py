@@ -1,4 +1,6 @@
+import os
 import time
+from typing import Any
 
 from fastembed import TextEmbedding
 from fastembed.common.model_description import PoolingType, ModelSource
@@ -9,7 +11,6 @@ class Embed:
     @classmethod
     def init_embedder(cls) -> None:
         # print(TextEmbedding.list_supported_models())
-        # os.environ["FASTEMBED_CACHE_PATH"] = Path("./models")
         # if cls.embedder is None:
         #     TextEmbedding.add_custom_model(
         #         model="intfloat/multilingual-e5-large3",
@@ -25,19 +26,30 @@ class Embed:
         #             _deprecated_tar_struct=True,
         #         )
         #     )
-        cls.embedder = TextEmbedding(model_name="intfloat/multilingual-e5-large", specific_model_path="./models/fast-multilingual-e5-large")
+        model_dir = None
+        for d in ("/opt/models/fast-multilingual-e5-large", "./models/fast-multilingual-e5-large"):
+            if os.path.exists(d):
+                model_dir = d
+                break
+        if model_dir is not None:
+            cls.embedder = TextEmbedding(model_name="intfloat/multilingual-e5-large", specific_model_path=model_dir)
 
-    @classmethod
-    def get_vector(cls, text: str) -> list[float]:
-        embeddings = list(cls.embedder.embed([text]))
-        return embeddings[0].tolist()
 
     @classmethod
     def get_vectors(cls, texts: list[str]) -> list[list[float]]:
-        embeddings = list(cls.embedder.embed(texts))
-        return [e.tolist() for e in embeddings]
+        if cls.embedder is not None:
+            embeddings = list(cls.embedder.embed(texts))
+            return [e.tolist() for e in embeddings]
+        else:
+            return []
 
 Embed.init_embedder()
+
+
+def lambda_handler(event: dict[str, Any], context) -> list[list[float]]:
+    return Embed.get_vectors(event.get("texts", []))
+
+
 
 if __name__ == "__main__":
     s = time.time_ns()
