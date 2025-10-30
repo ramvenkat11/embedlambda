@@ -49,11 +49,3 @@ Embed.init_embedder()
 def lambda_handler(event: dict[str, Any], context) -> list[list[float]]:
     return Embed.get_vectors(event.get("texts", []))
 
-
-
-if __name__ == "__main__":
-    s = time.time_ns()
-    v = Embed.get_vectors(["hello"])
-    print(len(v[0]))
-    print((time.time_ns() - s) / 1_000_000)
-    # print(Embed.get_vector("hello"))

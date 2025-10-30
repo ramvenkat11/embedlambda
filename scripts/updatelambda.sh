@@ -34,17 +34,17 @@ docker push "$IMAGE_URI"
 
 set -x
 
-# Create (or update) the Lambda
-aws lambda create-function \
-  --function-name ${EMBEDFUNC} \
-  --package-type Image \
-  --code ImageUri="$IMAGE_URI" \
-  --role arn:aws:iam::$ACCOUNT_ID:role/service-role/embedfuncrole \
-  --architectures x86_64 \
-  --memory-size 3072 \
-  --timeout 30
+## Create (or update) the Lambda
+#aws lambda create-function \
+#  --function-name ${EMBEDFUNC} \
+#  --package-type Image \
+#  --code ImageUri="$IMAGE_URI" \
+#  --role arn:aws:iam::$ACCOUNT_ID:role/service-role/embedfuncrole \
+#  --architectures x86_64 \
+#  --memory-size 3072 \
+#  --timeout 30
 # (Later updates use: aws lambda update-function-code --function-name ${EMBEDFUNC} --image-uri "$IMAGE_URI")
-
+aws lambda update-function-code --function-name ${EMBEDFUNC} --image-uri "$IMAGE_URI"
 docker buildx imagetools inspect "$IMAGE_URI"
 
 
