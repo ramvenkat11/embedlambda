@@ -1,5 +1,7 @@
 import os
 from typing import Any
+import time
+
 from fastembed import TextEmbedding
 
 
@@ -21,15 +23,17 @@ class Embed:
         if cls.embedder is None:
             return []
         out: list[list[float]] = []
-        i = 0
+        start = time.time_ns()
+        mem1 = _rss_bytes_linux_procfs()
         for e in cls.embedder.embed(texts[:-1]):
             out.append(e.tolist())
-            # print(f"{i + 1}: text: {texts[i]}, Memory: {_rss_bytes_linux_procfs()}")
-            i += 1
-        print(f"Memory after questions: {_rss_bytes_linux_procfs()}")
+        after_most = (time.time_ns() - start) // 1_000_000
+        mem_questions = _rss_bytes_linux_procfs()
         for e in cls.embedder.embed(texts[-1:]):
             out.append(e.tolist())
-        # print(f"text: Whole passage, Memory: {_rss_bytes_linux_procfs()}")
+        after_all = (time.time_ns() - start) // 1_000_000
+        mem2 = _rss_bytes_linux_procfs()
+        print(f"Memory:  before: {mem1},  questions: {mem_questions}, after: {mem2};  Time: After questions: {after_most} ms, After all: {after_all} ms")
         return out
 
 
@@ -44,8 +48,7 @@ Embed.init_embedder()
 
 def lambda_handler(event: dict[str, Any], context) -> list[list[float]]:
     texts = event.get("texts", [])
-    print(f"Number of texts: {len(texts)}, Memory before: {_rss_bytes_linux_procfs()}")
+    print(f"Number of texts: {len(texts)}, Memory before: {_rss_bytes_linux_procfs()}, Length of last text: {len(texts[-1])}")
     vectors = Embed.get_vectors(texts)
-    print(f"Memory before returning: {_rss_bytes_linux_procfs()}")
     return vectors
 
