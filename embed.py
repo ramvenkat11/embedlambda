@@ -1,6 +1,11 @@
 import os
-from typing import Any
 import time
+from typing import Any, TypedDict
+
+import boto3
+import msgpack
+
+s3 = boto3.client("s3")
 
 from fastembed import TextEmbedding
 
@@ -46,9 +51,40 @@ def _rss_bytes_linux_procfs() -> str:
 
 Embed.init_embedder()
 
-def lambda_handler(event: dict[str, Any], context) -> list[list[float]]:
+
+class EmbeddingsPayload(TypedDict):
+    v: int
+    embeddings: list[list[float]]
+
+
+def put_embeddings_msgpack_list_s3(bucket: str, key: str, vectors: list[list[float]]) -> dict[str, Any]:
+    """
+    Option 1: store list[list[float]] directly in MessagePack.
+
+    Pros: simplest, no custom binary layout, no precision changes.
+    Cons: bigger than float32-blob (floats typically encoded as float64).
+    """
+    payload: EmbeddingsPayload = {
+        "v": 1,
+        "embeddings": vectors
+    }
+
+    body: bytes = msgpack.packb(payload, use_bin_type=True)
+    s3.put_object(
+        Bucket=bucket,
+        Key=key,
+        Body=body,
+        ContentType="application/msgpack",
+    )
+    print(f'msgpack size: {len(body)}')
+    return {"success": True, "vectorsLen": len(vectors), "vectorsSize": len(body)}
+
+
+def lambda_handler(event: dict[str, Any], context) -> dict[str, Any]:
     texts = event.get("texts", [])
-    print(f"Number of texts: {len(texts)}, Memory before: {_rss_bytes_linux_procfs()}, Length of last text: {len(texts[-1])}")
+    s3bucket = event.get("s3bucket")
+    s3key = event.get("s3key")
+    print(f"key: {s3key}, Number of texts: {len(texts)}, Memory before: {_rss_bytes_linux_procfs()}, Length of last text: {len(texts[-1])}")
     vectors = Embed.get_vectors(texts)
-    return vectors
+    return put_embeddings_msgpack_list_s3(s3bucket, s3key, vectors)
 
